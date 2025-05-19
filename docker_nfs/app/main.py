@@ -3,6 +3,8 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from typing import List
+import yaml
+from urllib.parse import quote
 
 app = FastAPI()
 app.add_middleware(
@@ -44,3 +46,19 @@ async def upload_file(folder_name: str, file: UploadFile = File(...)):
     with open(file_path, "wb") as f:
         f.write(content)
     return {"filename": file.filename, "message": "Upload successful"}
+
+@app.get("/image-meta/{image_id}")
+def get_image_meta(image_id: str):
+    folder_path = get_folder_path("2d")  # 2d 폴더 경로 가져오기
+    yaml_path = os.path.join(folder_path, f"{image_id}.yaml")  # quote()는 필요없음, 파일명 그대로 사용 가능
+
+    if not os.path.isfile(yaml_path):
+        raise HTTPException(status_code=404, detail="YAML metadata not found")
+
+    try:
+        with open(yaml_path, "r", encoding="utf-8") as f:
+            metadata = yaml.safe_load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"YAML read error: {str(e)}")
+
+    return metadata
